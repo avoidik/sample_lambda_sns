@@ -1,0 +1,6 @@
+Resources:
+  app:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: bin/app
+      Runtime: go1.x

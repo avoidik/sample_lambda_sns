@@ -1,0 +1,55 @@
+service: app
+
+frameworkVersion: ">=1.28.0 <2.0.0"
+
+provider:
+  name: aws
+  runtime: go1.x
+  stage: dev
+  region: eu-west-1
+  profile: ${self:custom.myProfile.${self:custom.myStage}}
+  environment:
+    DYNAMODB_TABLE: Items
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: { "Fn::Join" : ["", ["arn:aws:dynamodb:${opt:region, self:provider.region}:", { "Ref" : "AWS::AccountId" }, ":table/${self:provider.environment.DYNAMODB_TABLE}" ] ]  }
+
+package:
+  individually: true
+
+functions:
+  hello:
+    handler: app
+    events:
+    - sns: ${self:service}
+    package:
+      artifact: lambda.zip
+
+custom:
+  myStage: ${opt:stage, self:provider.stage}
+  myProfile:
+    dev: personal
+
+resources:
+  Resources:
+    myDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: 'N'
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
